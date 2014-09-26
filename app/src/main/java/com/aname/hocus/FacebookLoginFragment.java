@@ -3,6 +3,7 @@ package com.aname.hocus;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,11 +20,14 @@ import com.facebook.model.GraphUser;
 import com.facebook.widget.LoginButton;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class FacebookLoginFragment extends Fragment {
 
     private static final String TAG = "FacebookLoginFragment";
 
+    private SessionManager sessionManager;
     private UiLifecycleHelper uiHelper;
     private Session.StatusCallback callback = new Session.StatusCallback() {
         @Override
@@ -31,8 +35,6 @@ public class FacebookLoginFragment extends Fragment {
             onSessionStateChange(session, state, exception);
         }
     };
-
-    private TextView userInfoTextView;
 
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -44,8 +46,6 @@ public class FacebookLoginFragment extends Fragment {
         authButton.setFragment(this);
         authButton.setReadPermissions(Arrays.asList("user_location", "user_birthday", "user_likes"));
 
-        userInfoTextView = (TextView) view.findViewById(R.id.userInfoTextView);
-
         return view;
     }
 
@@ -54,6 +54,8 @@ public class FacebookLoginFragment extends Fragment {
         super.onCreate(savedInstanceState);
         uiHelper = new UiLifecycleHelper(getActivity(), callback);
         uiHelper.onCreate(savedInstanceState);
+
+        sessionManager = new SessionManager(getActivity());
     }
 
     @Override
@@ -96,49 +98,58 @@ public class FacebookLoginFragment extends Fragment {
         uiHelper.onSaveInstanceState(outState);
     }
 
-    private void onSessionStateChange(Session session, SessionState state, Exception exception) {
+    private void onSessionStateChange(final Session session, SessionState state, Exception exception) {
         if (state.isOpened()) {
-            userInfoTextView.setVisibility(View.VISIBLE);
-
             // Request user data and show the results
-            Request.executeMeRequestAsync(session, new Request.GraphUserCallback() {
-
+            Request.newMeRequest(session, new Request.GraphUserCallback() {
                 @Override
                 public void onCompleted(GraphUser user, Response response) {
                     if (user != null) {
-                        // Display the parsed user info
-                        userInfoTextView.setText(buildUserInfoDisplay(user));
+                        sessionManager.create(getUserInfo(user));
+                        Intent i = new Intent(getActivity(), MainActivity.class);
+                        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(i);
+                        getActivity().finish();
                     }
                 }
-            });
+            }).executeAsync();
         } else if (state.isClosed()) {
-            userInfoTextView.setVisibility(View.INVISIBLE);
+            //Logout
+//            Log.i(TAG, "Fiz logout");
         }
     }
 
-    private String buildUserInfoDisplay(GraphUser user) {
-        StringBuilder userInfo = new StringBuilder("");
+    private Map<String, String> getUserInfo(GraphUser user) {
+        Map<String, String> result = new HashMap<String, String>();
+        result.put("name", user.getName());
+        result.put("birthday", user.getBirthday());
+        result.put("username", user.getUsername());
+        return result;
+    }
 
-        // Example: typed access (name)
-        // - no special permissions required
-        userInfo.append(String.format("Name: %s\n\n",
-                user.getName()));
-
-        // Example: typed access (birthday)
-        // - requires user_birthday permission
-        userInfo.append(String.format("Birthday: %s\n\n",
-                user.getBirthday()));
-
-        // Example: partially typed access, to location field,
-        // name key (location)
-        // - requires user_location permission
-        userInfo.append(String.format("Location: %s\n\n",
-                user.getLocation().getProperty("name")));
-
-        // Example: access via property name (locale)
-        // - no special permissions required
-        userInfo.append(String.format("Locale: %s\n\n",
-                user.getProperty("locale")));
+//    private String buildUserInfoDisplay(GraphUser user) {
+//        StringBuilder userInfo = new StringBuilder("");
+//
+//        // Example: typed access (name)
+//        // - no special permissions required
+//        userInfo.append(String.format("Name: %s\n\n",
+//                user.getName()));
+//
+//        // Example: typed access (birthday)
+//        // - requires user_birthday permission
+//        userInfo.append(String.format("Birthday: %s\n\n",
+//                user.getBirthday()));
+//
+//        // Example: partially typed access, to location field,
+//        // name key (location)
+//        // - requires user_location permission
+//        userInfo.append(String.format("Location: %s\n\n",
+//                user.getLocation().getProperty("name")));
+//
+//        // Example: access via property name (locale)
+//        // - no special permissions required
+//        userInfo.append(String.format("Locale: %s\n\n",
+//                user.getProperty("locale")));
 
         // Example: access via key for array (languages)
         // - requires user_likes permission
@@ -194,22 +205,22 @@ public class FacebookLoginFragment extends Fragment {
 //            languageNames.toString()));
 //        }
 
-        return userInfo.toString();
-    }
+//        return userInfo.toString();
+//    }
 
     // Private interface for GraphUser that includes
     // the languages field: Used in Option 3
-    private interface MyGraphUser extends GraphUser {
-        // Create a setter to enable easy extraction of the languages field
-        GraphObjectList<MyGraphLanguage> getLanguages();
-    }
+//    private interface MyGraphUser extends GraphUser {
+//        // Create a setter to enable easy extraction of the languages field
+//        GraphObjectList<MyGraphLanguage> getLanguages();
+//    }
 
     // Private interface for a language Graph Object
     // for a User: Used in Options 2 and 3
-    private interface MyGraphLanguage extends GraphObject {
-        // Getter for the ID field
-        String getId();
-        // Getter for the Name field
-        String getName();
-    }
+//    private interface MyGraphLanguage extends GraphObject {
+//        // Getter for the ID field
+//        String getId();
+//        // Getter for the Name field
+//        String getName();
+//    }
 }
