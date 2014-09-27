@@ -1,34 +1,117 @@
 package com.aname.hocus;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.nfc.NfcAdapter;
+import android.nfc.Tag;
+import android.nfc.tech.Ndef;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+import com.facebook.UiLifecycleHelper;
+import java.util.Map;
 
+public class MainActivity extends Activity implements NdefReaderTaskCompleted {
 
-public class MainActivity extends Activity {
+    private static final String MIME_TEXT_PLAIN = "text/plain";
+    private static final String TAG = "MainActiviy";
 
+    private UiLifecycleHelper uiHelper;
     private SessionManager sessionManager;
+    private NfcAdapter nfcAdapter;
+
+    private LinearLayout nfcEnabledLayout;
+    private LinearLayout nfcDisabledLayout;
+    private ImageView nfcEnabledImage;
+    private ImageView nfcDisabledImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if(uiHelper == null) {
+            uiHelper = new UiLifecycleHelper(this, null);
+        }
+        uiHelper.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_main);
+
+        nfcEnabledLayout = (LinearLayout) findViewById(R.id.layout_nfc_enabled);
+        nfcDisabledLayout= (LinearLayout) findViewById(R.id.layout_nfc_disabled);
+        nfcEnabledImage = (ImageView) findViewById(R.id.imageView_nfc_enabled);
+        nfcDisabledImage = (ImageView) findViewById(R.id.imageView_nfc_disabled);
+
+        nfcDisabledLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivityForResult(new Intent(android.provider.Settings.ACTION_NFC_SETTINGS), 0);
+            }
+        });
 
         sessionManager = new SessionManager(this);
         if(!sessionManager.isOpen()) {
             startLoginActivity();
+            return;
         }
 
-        setContentView(R.layout.activity_main);
+        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+
+        if (nfcAdapter == null) {
+            // Stop here, we definitely need NFC
+            Toast.makeText(this, "This device doesn't support NFC.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        updateNfcStatus();
+        handleIntent(getIntent());
     }
 
     @Override
     protected void onResume() {
-        if(!sessionManager.isOpen()) {
+        super.onResume();
+        uiHelper.onResume();
+        updateNfcStatus();
+        if(sessionManager.isOpen()) {
+            setupForegroundDispatch(this, nfcAdapter);
+        } else {
             startLoginActivity();
         }
-        super.onResume();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        uiHelper.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    protected void onPause() {
+        stopForegroundDispatch(this, nfcAdapter);
+        super.onPause();
+        uiHelper.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        uiHelper.onDestroy();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        uiHelper.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        handleIntent(intent);
     }
 
     @Override
@@ -53,8 +136,16 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onNdefReaderTaskCompleted(Map<String, String> info) {
+        Toast.makeText(this,
+                String.format("uid: %s\nrid: %s", info.get("uid"), info.get("rid")),
+                Toast.LENGTH_LONG).show();
+    }
+
     private void logout() {
         sessionManager.destroy();
+        startLoginActivity();
     }
 
     private void startLoginActivity() {
@@ -62,5 +153,67 @@ public class MainActivity extends Activity {
         i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(i);
         finish();
+    }
+
+    private void handleIntent(Intent intent) {
+        String action = intent.getAction();
+        if(NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)){
+            String type = intent.getType();
+            if(MIME_TEXT_PLAIN.equals(type)) {
+                Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+                new NdefReaderTask(this).execute(tag);
+            }
+        } else if(NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
+            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+            String[] techList = tag.getTechList();
+            String searchedTech = Ndef.class.getName();
+
+            for (String tech : techList) {
+                if (searchedTech.equals(tech)) {
+                    new NdefReaderTask(this).execute(tag);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void updateNfcStatus() {
+        if(nfcAdapter.isEnabled()) {
+            nfcEnabledLayout.setVisibility(View.VISIBLE);
+            nfcEnabledImage.setVisibility(View.VISIBLE);
+            nfcDisabledLayout.setVisibility(View.INVISIBLE);
+            nfcDisabledImage.setVisibility(View.INVISIBLE);
+        } else {
+            nfcEnabledLayout.setVisibility(View.INVISIBLE);
+            nfcEnabledImage.setVisibility(View.INVISIBLE);
+            nfcDisabledLayout.setVisibility(View.VISIBLE);
+            nfcDisabledImage.setVisibility(View.VISIBLE);
+        }
+    }
+
+    public static void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
+        final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
+
+        IntentFilter[] filters = new IntentFilter[1];
+        String[][] techList = new String[][]{};
+
+        // Notice that this is the same filter as in our mani//fest.
+        filters[0] = new IntentFilter();
+        filters[0].addAction(NfcAdapter.ACTION_NDEF_DISCOVERED);
+        filters[0].addCategory(Intent.CATEGORY_DEFAULT);
+        try {
+            filters[0].addDataType(MIME_TEXT_PLAIN);
+        } catch (IntentFilter.MalformedMimeTypeException e) {
+            throw new RuntimeException("Check your mime type.");
+        }
+
+        adapter.enableForegroundDispatch(activity, pendingIntent, filters, techList);
+    }
+
+    public static void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
+        adapter.disableForegroundDispatch(activity);
     }
 }

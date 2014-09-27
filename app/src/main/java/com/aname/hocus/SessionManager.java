@@ -41,8 +41,10 @@ public class SessionManager {
 
     public void destroy() {
         Session session = Session.getActiveSession();
-        if (session != null)
+        if (session != null) {
             session.closeAndClearTokenInformation();
+            session.setActiveSession(null);
+        }
 
         this.editor.clear();
         this.editor.commit();

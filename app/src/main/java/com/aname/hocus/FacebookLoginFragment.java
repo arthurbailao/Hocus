@@ -27,11 +27,15 @@ public class FacebookLoginFragment extends Fragment {
 
     private static final String TAG = "FacebookLoginFragment";
 
-    private SessionManager sessionManager;
+    private FacebookLoginCompleted listener;
     private UiLifecycleHelper uiHelper;
+
     private Session.StatusCallback callback = new Session.StatusCallback() {
         @Override
         public void call(final Session session, final SessionState state, final Exception exception) {
+            Log.i(TAG, state.name());
+            Log.i(TAG, state.toString());
+
             onSessionStateChange(session, state, exception);
         }
     };
@@ -54,8 +58,6 @@ public class FacebookLoginFragment extends Fragment {
         super.onCreate(savedInstanceState);
         uiHelper = new UiLifecycleHelper(getActivity(), callback);
         uiHelper.onCreate(savedInstanceState);
-
-        sessionManager = new SessionManager(getActivity());
     }
 
     @Override
@@ -98,24 +100,24 @@ public class FacebookLoginFragment extends Fragment {
         uiHelper.onSaveInstanceState(outState);
     }
 
+    public void setFacebookLoginCompleted(FacebookLoginCompleted listener) {
+        this.listener = listener;
+    }
+
     private void onSessionStateChange(final Session session, SessionState state, Exception exception) {
         if (state.isOpened()) {
             // Request user data and show the results
             Request.newMeRequest(session, new Request.GraphUserCallback() {
                 @Override
                 public void onCompleted(GraphUser user, Response response) {
-                    if (user != null) {
-                        sessionManager.create(getUserInfo(user));
-                        Intent i = new Intent(getActivity(), MainActivity.class);
-                        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        startActivity(i);
-                        getActivity().finish();
+                    if (user != null && listener != null) {
+                        listener.onFacebookLoginCompleted(getUserInfo(user));
                     }
                 }
             }).executeAsync();
         } else if (state.isClosed()) {
             //Logout
-//            Log.i(TAG, "Fiz logout");
+            Log.i(TAG, "Fiz logout");
         }
     }
 

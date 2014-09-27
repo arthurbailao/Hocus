@@ -23,7 +23,7 @@
             android:gravity="center_horizontal"
             android:textSize="100sp"
             android:fontFamily="sans-serif-thin"
-            android:textColor="@android:color/holo_blue_dark" />
+            android:textColor="@android:color/holo_blue_bright" />
 
     </FrameLayout>
 
@@ -34,6 +34,7 @@
         android:gravity="bottom">
 
         <com.facebook.widget.LoginButton
+            xmlns:fb="http://schemas.android.com/apk/res-auto"
             android:id="@+id/authButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,19 +42,8 @@
             android:layout_marginBottom="30dp"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
+            fb:logout_text="@string/com_facebook_loginview_log_in_button"
             android:alpha="0.80"
             />
     </LinearLayout>
-
-
-    <!--<TextView-->
-        <!--android:id="@+id/userInfoTextView"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent"-->
-        <!--android:layout_marginLeft="20dp"-->
-        <!--android:layout_marginTop="20dp"-->
-        <!--android:textAppearance="?android:attr/textAppearanceMedium"-->
-        <!--android:visibility="invisible"-->
-        <!--/>-->
-
 </LinearLayout>

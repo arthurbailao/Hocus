@@ -8,5 +8,8 @@
     <string name="action_logout">Logout</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="title_activity_main">MainActivity</string>
+    <string name="nfc_disabled_text">NFC is off!</string>
+    <string name="nfc_disabled_comment">Click here to change NFC and wireless settings.</string>
+    <string name="nfc_enabled_text">Scan a tag…</string>
 
 </resources>

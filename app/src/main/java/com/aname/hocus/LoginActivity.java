@@ -1,19 +1,28 @@
 package com.aname.hocus;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 
-public class LoginActivity extends FragmentActivity {
+import java.util.Map;
+
+public class LoginActivity extends FragmentActivity implements FacebookLoginCompleted {
 
     private FacebookLoginFragment facebookLoginFragment;
+    private SessionManager sessionManager;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        if (sessionManager == null) {
+            sessionManager = new SessionManager(this);
+        }
+
         if (savedInstanceState == null) {
             // Add the fragment on initial activity setup
             facebookLoginFragment = new FacebookLoginFragment();
+            facebookLoginFragment.setFacebookLoginCompleted(this);
             getSupportFragmentManager()
                     .beginTransaction()
                     .add(android.R.id.content, facebookLoginFragment)
@@ -24,6 +33,15 @@ public class LoginActivity extends FragmentActivity {
                     .findFragmentById(android.R.id.content);
         }
 
+    }
+
+    @Override
+    public void onFacebookLoginCompleted(Map<String, String> userInfo) {
+        sessionManager.create(userInfo);
+        Intent i = new Intent(this, MainActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(i);
+        finish();
     }
 
     //
