@@ -60,7 +60,6 @@ public class NdefReaderTask extends AsyncTask<Tag, Void, Map<String, String> > {
     protected void onPostExecute(Map<String, String> info) {
         if (info != null) {
             listener.onNdefReaderTaskCompleted(info);
-//                mTextView.setText("Read content: " + result);
         }
     }
 

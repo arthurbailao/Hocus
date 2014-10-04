@@ -11,5 +11,8 @@
     <string name="nfc_disabled_text">NFC is off!</string>
     <string name="nfc_disabled_comment">Click here to change NFC and wireless settings.</string>
     <string name="nfc_enabled_text">Scan a tag…</string>
+    <string name="alert_title">Alert</string>
+    <string name="alert_text">This product is fake!</string>
+    <string name="title_activity_product">ProductActivity</string>
 
 </resources>

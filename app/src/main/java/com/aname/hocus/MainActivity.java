@@ -1,7 +1,9 @@
 package com.aname.hocus;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.nfc.NfcAdapter;
@@ -18,7 +20,7 @@ import android.widget.Toast;
 import com.facebook.UiLifecycleHelper;
 import java.util.Map;
 
-public class MainActivity extends Activity implements NdefReaderTaskCompleted {
+public class MainActivity extends Activity implements NdefReaderTaskCompleted, TagValidationTaskCompleted {
 
     private static final String MIME_TEXT_PLAIN = "text/plain";
     private static final String TAG = "MainActiviy";
@@ -138,9 +140,38 @@ public class MainActivity extends Activity implements NdefReaderTaskCompleted {
 
     @Override
     public void onNdefReaderTaskCompleted(Map<String, String> info) {
-        Toast.makeText(this,
-                String.format("uid: %s\nrid: %s", info.get("uid"), info.get("rid")),
-                Toast.LENGTH_LONG).show();
+        new TagValidationTask(this).execute(info.get("uid"), info.get("rid"));
+    }
+
+    @Override
+    public void onValidTag(Map<String, String> info) {
+//        Toast.makeText(this,
+//                String.format("name: %s\nurl: %s", info.get("name"), info.get("url")),
+//                Toast.LENGTH_LONG).show();
+        Intent i = new Intent(this, ProductActivity.class);
+        i.putExtra("name", info.get("name"));
+        i.putExtra("img", info.get("img"));
+        startActivity(i);
+    }
+
+    @Override
+    public void onInvalidTag() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.alert_title)
+                .setMessage(R.string.alert_text)
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // continue with delete
+                    }
+                })
+//                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+//                    public void onClick(DialogInterface dialog, int which) {
+//                        // do nothing
+//                    }
+//                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+
     }
 
     private void logout() {

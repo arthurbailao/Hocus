@@ -33,9 +33,6 @@ public class FacebookLoginFragment extends Fragment {
     private Session.StatusCallback callback = new Session.StatusCallback() {
         @Override
         public void call(final Session session, final SessionState state, final Exception exception) {
-            Log.i(TAG, state.name());
-            Log.i(TAG, state.toString());
-
             onSessionStateChange(session, state, exception);
         }
     };
@@ -117,7 +114,6 @@ public class FacebookLoginFragment extends Fragment {
             }).executeAsync();
         } else if (state.isClosed()) {
             //Logout
-            Log.i(TAG, "Fiz logout");
         }
     }
 
